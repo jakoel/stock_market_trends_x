@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            width: 320px;
+            padding: 24px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f0f0f;
+            color: #e5e5e5;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        
+        h3 {
+            margin: 0 0 24px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 10px 16px;
+            margin: 6px 0;
+            cursor: pointer;
+            background: #2a2a2a;
+            color: #e5e5e5;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #333333;
+            border-color: #4a4a4a;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        button.primary {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #ffffff;
+        }
+        
+        button.primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        
+        button.secondary {
+            background: #6366f1;
+            border-color: #6366f1;
+            color: #ffffff;
+        }
+        
+        button.secondary:hover {
+            background: #4f46e5;
+            border-color: #4f46e5;
+        }
+        
+        button.success {
+            background: #10b981;
+            border-color: #10b981;
+            color: #ffffff;
+        }
+        
+        button.success:hover {
+            background: #059669;
+            border-color: #059669;
+        }
+        
+        button.danger {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #ffffff;
+        }
+        
+        button.danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+        
+        .mention-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .mention-item:hover {
+            background: #222222;
+            border-color: #3a3a3a;
+        }
+        
+        .ticker-name {
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 14px;
+        }
+        
+        .mention-count {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .mention-time {
+            color: #888888;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        
+        textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            color: #e5e5e5;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+        
+        textarea:focus, select:focus {
+            border-color: #3b82f6;
+            outline: none;
+        }
+        
+        label {
+            font-size: 12px;
+            color: #888888;
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .status {
+            padding: 10px 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .info {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        #results {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        #resultsContent {
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+            background: #0f0f0f;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <h3>Twitter Ticker Extractor</h3>
+
+    <div class="status info" id="pairCount" style="margin-bottom: 20px;">Loading...</div>
+
+    <div class="section">
+        <label for="timeFilter">
+            Top Mentions Time Range:
+        </label>
+        <select id="timeFilter">
+            <option value="1">Last 24 hours</option>
+            <option value="3">Last 3 days</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="0">All time</option>
+        </select>
+        <button id="showTopBtn" class="primary" style="margin-top: 8px;">Show Top Mentions</button>
+        <button id="exportBtn">Export CSV</button>
+        <button id="clearBtn" class="danger">Clear All Data</button>
+    </div>
+
+    <div class="section">
+        <button id="toggleCsvBtn" class="secondary" style="margin-bottom: 10px;">Load CSV Data</button>
+        <div id="csvSection" style="display: none;">
+            <label for="csvText">
+                Paste CSV content or drag & drop CSV file:
+            </label>
+            <textarea id="csvText" placeholder="Paste CSV content here or drag & drop a CSV file..." 
+                      style="height: 100px; font-family: 'Courier New', monospace; resize: vertical;"></textarea>
+            <button id="loadCsvBtn" class="success" style="margin-top: 5px;">Load CSV Data</button>
+            <button id="loadExistingBtn" class="secondary" style="margin-top: 5px;">Load from twitter_tickers_cache.csv</button>
+        </div>
+    </div>
+
+    <div id="message"></div>
+
+    <div id="results" style="display: none;">
+        <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px;">Top Mentions</h3>
+        <div id="resultsContent"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
