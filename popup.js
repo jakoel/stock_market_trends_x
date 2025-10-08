@@ -36,7 +36,7 @@ function updatePairCount() {
     browserAPI.storage.local.get('tickerPairs').then(result => {
         if (result.tickerPairs) {
             const count = Object.keys(result.tickerPairs).length;
-            pairCountEl.textContent = `${count} ticker pairs stored`;
+            pairCountEl.textContent = `${count} ticker pairs`;
             pairCountEl.className = 'status info';
         } else {
             pairCountEl.textContent = 'No data stored';
@@ -299,7 +299,7 @@ showTopBtn.addEventListener('click', async () => {
         // Sort by count
         const sorted = Object.entries(tickerData)
             .sort((a, b) => b[1].count - a[1].count)
-            .slice(0, 20);
+            .slice(0, 10);
 
         // Display results
         if (sorted.length === 0) {
@@ -323,7 +323,6 @@ showTopBtn.addEventListener('click', async () => {
         }
 
         resultsDiv.style.display = 'block';
-        showMessage(`Analysis complete - ${sorted.length} tickers found`, 'success');
 
     } catch (err) {
         showMessage('Error: ' + err.message, 'error');

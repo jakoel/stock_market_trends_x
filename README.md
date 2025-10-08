@@ -36,14 +36,6 @@ This Firefox extension automatically extracts stock ticker symbols and their ass
 4. **CSV file is auto-updated** in your Downloads folder every time new ticker-post pairs are found
 5. The file is always named: `twitter_tickers_cache.csv` (overwrites itself with updates)
 
-## CSV Format
-
-```csv
-Ticker,Post URL
-$OSCR,https://x.com/username/status/1234567890
-$HIMS,https://x.com/username/status/9876543210
-```
-
 ## Manual Export
 
 Click the extension icon in the toolbar to manually trigger an export (optional).
