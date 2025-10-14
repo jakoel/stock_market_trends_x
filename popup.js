@@ -16,6 +16,9 @@ const clearBtn = document.getElementById('clearBtn');
 const messageEl = document.getElementById('message');
 const resultsDiv = document.getElementById('results');
 const resultsContent = document.getElementById('resultsContent');
+const autoScrollBtn = document.getElementById('autoScrollBtn');
+const scrollStatus = document.getElementById('scrollStatus');
+const csvFileInput = document.getElementById('csvFileInput');
 
 console.log('Popup script loaded');
 console.log('Elements found:', {
@@ -150,6 +153,36 @@ loadCsvBtn.addEventListener('click', async () => {
     await processCsvData(csvText);
 });
 
+// File input handler
+csvFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        showMessage('Please select a CSV file', 'error');
+        return;
+    }
+
+    log(`File selected: ${file.name}, Size: ${file.size}`);
+    showMessage('Loading CSV...', 'info');
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const csvText = e.target.result;
+        await processCsvData(csvText);
+        // Reset file input
+        csvFileInput.value = '';
+    };
+
+    reader.onerror = (err) => {
+        log(`FileReader error: ${err.message}`);
+        showMessage('Error reading file', 'error');
+        csvFileInput.value = '';
+    };
+
+    reader.readAsText(file);
+});
+
 // Drag and drop functionality
 csvTextArea.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -164,30 +197,30 @@ csvTextArea.addEventListener('dragleave', (e) => {
 csvTextArea.addEventListener('drop', async (e) => {
     e.preventDefault();
     csvTextArea.style.borderColor = '#ccc';
-    
+
     const files = e.dataTransfer.files;
     if (files.length === 0) return;
-    
+
     const file = files[0];
     if (!file.name.toLowerCase().endsWith('.csv')) {
         showMessage('Please drop a CSV file', 'error');
         return;
     }
-    
+
     log(`File dropped: ${file.name}, Size: ${file.size}`);
     showMessage('Loading CSV...', 'info');
-    
+
     const reader = new FileReader();
     reader.onload = async (e) => {
         const csvText = e.target.result;
         await processCsvData(csvText);
     };
-    
+
     reader.onerror = (err) => {
         log(`FileReader error: ${err.message}`);
         showMessage('Error reading file', 'error');
     };
-    
+
     reader.readAsText(file);
 });
 
@@ -350,8 +383,115 @@ clearBtn.addEventListener('click', () => {
 });
 
 
+// Auto-scroll button functionality
+let isAutoScrollActive = false;
+
+async function updateAutoScrollButton() {
+    try {
+        // Query the active tab
+        const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
+        if (tabs.length === 0) return;
+
+        // Get scroll status from content script
+        const response = await browserAPI.tabs.sendMessage(tabs[0].id, { type: 'GET_AUTO_SCROLL_STATUS' });
+
+        if (response && response.isScrolling) {
+            isAutoScrollActive = true;
+            autoScrollBtn.textContent = 'Stop Auto-Scroll';
+            autoScrollBtn.classList.remove('primary');
+            autoScrollBtn.classList.add('danger');
+            scrollStatus.textContent = 'Auto-scrolling...';
+            scrollStatus.style.display = 'block';
+            scrollStatus.className = 'status success';
+        } else {
+            isAutoScrollActive = false;
+            autoScrollBtn.textContent = 'Start Auto-Scroll';
+            autoScrollBtn.classList.remove('danger');
+            autoScrollBtn.classList.add('primary');
+            scrollStatus.style.display = 'none';
+        }
+    } catch (err) {
+        console.log('Could not get auto-scroll status:', err.message);
+        // Reset to default state
+        isAutoScrollActive = false;
+        autoScrollBtn.textContent = 'Start Auto-Scroll';
+        autoScrollBtn.classList.remove('danger');
+        autoScrollBtn.classList.add('primary');
+        scrollStatus.style.display = 'none';
+    }
+}
+
+autoScrollBtn.addEventListener('click', async () => {
+    try {
+        // Query the active tab
+        const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
+        if (tabs.length === 0) {
+            showMessage('No active tab found', 'error');
+            return;
+        }
+
+        const tab = tabs[0];
+
+        // Check if we're on x.com
+        if (!tab.url || !tab.url.includes('x.com')) {
+            showMessage('Please navigate to x.com first', 'error');
+            return;
+        }
+
+        if (isAutoScrollActive) {
+            // Stop scrolling
+            await browserAPI.tabs.sendMessage(tab.id, { type: 'STOP_AUTO_SCROLL' });
+            isAutoScrollActive = false;
+            autoScrollBtn.textContent = 'Start Auto-Scroll';
+            autoScrollBtn.classList.remove('danger');
+            autoScrollBtn.classList.add('primary');
+            scrollStatus.style.display = 'none';
+        } else {
+            // Start scrolling
+            await browserAPI.tabs.sendMessage(tab.id, { type: 'START_AUTO_SCROLL' });
+            isAutoScrollActive = true;
+            autoScrollBtn.textContent = 'Stop Auto-Scroll';
+            autoScrollBtn.classList.remove('primary');
+            autoScrollBtn.classList.add('danger');
+            scrollStatus.textContent = 'Auto-scrolling...';
+            scrollStatus.style.display = 'block';
+            scrollStatus.className = 'status success';
+        }
+    } catch (err) {
+        console.log('Error toggling auto-scroll:', err);
+        showMessage('Error: Make sure you are on x.com', 'error');
+    }
+});
+
+// Listen for auto-scroll status updates from content script
+browserAPI.runtime.onMessage.addListener((message) => {
+    if (message.type === 'AUTO_SCROLL_STATUS') {
+        if (message.isScrolling) {
+            isAutoScrollActive = true;
+            autoScrollBtn.textContent = 'Stop Auto-Scroll';
+            autoScrollBtn.classList.remove('primary');
+            autoScrollBtn.classList.add('danger');
+            scrollStatus.textContent = 'Auto-scrolling...';
+            scrollStatus.style.display = 'block';
+            scrollStatus.className = 'status success';
+        } else {
+            isAutoScrollActive = false;
+            autoScrollBtn.textContent = 'Start Auto-Scroll';
+            autoScrollBtn.classList.remove('danger');
+            autoScrollBtn.classList.add('primary');
+            scrollStatus.textContent = 'Stopped - found known post';
+            scrollStatus.className = 'status info';
+            // Hide status after 3 seconds
+            setTimeout(() => {
+                scrollStatus.style.display = 'none';
+            }, 3000);
+        }
+    }
+});
+
 // Initial load
 updatePairCount();
+updateAutoScrollButton();
 
 // Auto-load existing CSV data when popup opens
 autoLoadExistingCSV();

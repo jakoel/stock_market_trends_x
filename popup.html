@@ -282,6 +282,11 @@
 <body>
     <h3>Twitter Ticker Extractor</h3>
 
+    <div class="section" style="margin-bottom: 20px;">
+        <button id="autoScrollBtn" class="primary" style="font-size: 14px; padding: 12px;">Start Auto-Scroll</button>
+        <div id="scrollStatus" class="status info" style="margin-top: 10px; display: none;">Auto-scroll ready</div>
+    </div>
+
     <div class="status info" id="pairCount" style="margin-bottom: 20px;">Loading...</div>
 
     <div class="section">
@@ -306,10 +311,12 @@
             <label for="csvText">
                 Paste CSV content or drag & drop CSV file:
             </label>
-            <textarea id="csvText" placeholder="Paste CSV content here or drag & drop a CSV file..." 
+            <textarea id="csvText" placeholder="Paste CSV content here or drag & drop a CSV file..."
                       style="height: 100px; font-family: 'Courier New', monospace; resize: vertical;"></textarea>
             <button id="loadCsvBtn" class="success" style="margin-top: 5px;">Load CSV Data</button>
-            <button id="loadExistingBtn" class="secondary" style="margin-top: 5px;">Load from twitter_tickers_cache.csv</button>
+            <label style="margin-top: 15px; margin-bottom: 5px;">Or select file:</label>
+            <input type="file" id="csvFileInput" accept=".csv" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; color: #e5e5e5; font-size: 12px; cursor: pointer;">
+            <button id="loadExistingBtn" class="secondary" style="margin-top: 10px;">Load from Extension Folder</button>
         </div>
     </div>
 

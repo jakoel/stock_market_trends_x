@@ -135,10 +135,144 @@ if (document.readyState === 'loading') {
     startObserving();
 }
 
-// Listen for messages from background script (e.g., to clear cache)
+// Auto-scroll functionality
+let isAutoScrolling = false;
+let autoScrollInterval = null;
+let knownPostUrls = new Set(); // Track URLs we've already seen
+
+// Initialize known posts from storage
+async function initializeKnownPosts() {
+    knownPostUrls.clear();
+
+    try {
+        // Load from storage (includes CSV data)
+        const result = await browserAPI.storage.local.get('tickerPairs');
+
+        if (result.tickerPairs) {
+            // Extract all URLs from stored pairs
+            Object.keys(result.tickerPairs).forEach(pairKey => {
+                const url = pairKey.split('|')[1];
+                if (url) {
+                    knownPostUrls.add(url);
+                }
+            });
+        }
+
+        // Also add from current session
+        seenPairs.forEach(pairKey => {
+            const url = pairKey.split('|')[1];
+            if (url) {
+                knownPostUrls.add(url);
+            }
+        });
+
+        console.log('Initialized known posts from storage:', knownPostUrls.size);
+    } catch (err) {
+        console.error('Error loading known posts:', err);
+    }
+}
+
+// Check if we've encountered a known post in the current viewport
+function hasKnownPostInView() {
+    const articles = document.querySelectorAll('article');
+
+    for (const article of articles) {
+        const statusLink = article.querySelector('a[href*="/status/"]');
+        if (statusLink) {
+            const statusHref = statusLink.getAttribute('href');
+            let fullUrl = statusHref.startsWith('http')
+                ? statusHref
+                : 'https://x.com' + statusHref;
+
+            // Clean up URL (same logic as extraction)
+            fullUrl = fullUrl.split('?')[0];
+            fullUrl = fullUrl.replace(/\/(photo|video|analytics|likes|retweets)\/\d+$/, '');
+            fullUrl = fullUrl.replace(/\/(photo|video|analytics)$/, '');
+
+            if (knownPostUrls.has(fullUrl)) {
+                console.log('Found known post in view:', fullUrl);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// Human-like scroll function
+function humanLikeScroll() {
+    if (!isAutoScrolling) return;
+
+    // Check if we've hit a known post
+    if (hasKnownPostInView()) {
+        console.log('Auto-scroll stopped: Known post detected');
+        stopAutoScroll();
+        return;
+    }
+
+    // Variable scroll distances (50-150 pixels)
+    const scrollDistance = Math.floor(Math.random() * 100) + 50;
+
+    // Smooth scroll
+    window.scrollBy({
+        top: scrollDistance,
+        behavior: 'smooth'
+    });
+
+    // Random delay between scrolls (600-1500ms)
+    const nextDelay = Math.floor(Math.random() * 900) + 600;
+
+    autoScrollInterval = setTimeout(humanLikeScroll, nextDelay);
+}
+
+// Start auto-scrolling
+async function startAutoScroll() {
+    if (isAutoScrolling) return;
+
+    console.log('Starting auto-scroll...');
+    isAutoScrolling = true;
+
+    // Wait for known posts to be loaded from storage
+    await initializeKnownPosts();
+
+    // Send message to popup
+    browserAPI.runtime.sendMessage({
+        type: 'AUTO_SCROLL_STATUS',
+        isScrolling: true
+    }).catch(() => {});
+
+    humanLikeScroll();
+}
+
+// Stop auto-scrolling
+function stopAutoScroll() {
+    if (!isAutoScrolling) return;
+
+    console.log('Stopping auto-scroll...');
+    isAutoScrolling = false;
+
+    if (autoScrollInterval) {
+        clearTimeout(autoScrollInterval);
+        autoScrollInterval = null;
+    }
+
+    // Send message to popup
+    browserAPI.runtime.sendMessage({
+        type: 'AUTO_SCROLL_STATUS',
+        isScrolling: false
+    }).catch(() => {});
+}
+
+// Listen for messages from background script and popup
 browserAPI.runtime.onMessage.addListener((message) => {
     if (message.type === 'CLEAR_CACHE') {
         seenPairs.clear();
         console.log('Twitter Ticker Extractor: Cache cleared');
+    } else if (message.type === 'START_AUTO_SCROLL') {
+        startAutoScroll();
+    } else if (message.type === 'STOP_AUTO_SCROLL') {
+        stopAutoScroll();
+    } else if (message.type === 'GET_AUTO_SCROLL_STATUS') {
+        return Promise.resolve({ isScrolling: isAutoScrolling });
     }
 });
