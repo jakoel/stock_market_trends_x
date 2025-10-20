@@ -479,12 +479,7 @@ browserAPI.runtime.onMessage.addListener((message) => {
             autoScrollBtn.textContent = 'Start Auto-Scroll';
             autoScrollBtn.classList.remove('danger');
             autoScrollBtn.classList.add('primary');
-            scrollStatus.textContent = 'Stopped - found known post';
-            scrollStatus.className = 'status info';
-            // Hide status after 3 seconds
-            setTimeout(() => {
-                scrollStatus.style.display = 'none';
-            }, 3000);
+            scrollStatus.style.display = 'none';
         }
     }
 });

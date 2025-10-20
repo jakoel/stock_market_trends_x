@@ -200,18 +200,12 @@ function hasKnownPostInView() {
 }
 
 // Human-like scroll function
+// Human-like scroll function
 function humanLikeScroll() {
     if (!isAutoScrolling) return;
 
-    // Check if we've hit a known post
-    if (hasKnownPostInView()) {
-        console.log('Auto-scroll stopped: Known post detected');
-        stopAutoScroll();
-        return;
-    }
-
-    // Variable scroll distances (50-150 pixels)
-    const scrollDistance = Math.floor(Math.random() * 100) + 50;
+    // 1. THIS CONTROLS SCROLL DISTANCE (currently 50-150 pixels)
+    const scrollDistance = Math.floor(Math.random() * 100) + 300;
 
     // Smooth scroll
     window.scrollBy({
@@ -219,8 +213,8 @@ function humanLikeScroll() {
         behavior: 'smooth'
     });
 
-    // Random delay between scrolls (600-1500ms)
-    const nextDelay = Math.floor(Math.random() * 900) + 600;
+    // 2. THIS CONTROLS THE DELAY (currently 600-1500ms)
+    const nextDelay = Math.floor(Math.random() * 900) + 200;
 
     autoScrollInterval = setTimeout(humanLikeScroll, nextDelay);
 }
