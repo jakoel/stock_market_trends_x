@@ -44,7 +44,7 @@ browserAPI.runtime.onMessage.addListener((message, sender) => {
     }
 });
 
-// Export data to CSV file (manual export only)
+// Export data to CSV file
 function exportToCSV() {
     if (allPairs.size === 0) {
         return; // Nothing to export
@@ -85,15 +85,11 @@ function exportToCSV() {
 
 // Function to load data from storage
 function loadFromStorage() {
-    console.log('Loading data from storage...');
     browserAPI.storage.local.get('tickerPairs').then(result => {
-        console.log('Storage get result:', result);
         if (result.tickerPairs) {
             allPairs = new Map(Object.entries(result.tickerPairs));
-            console.log(`Loaded ${allPairs.size} ticker pairs from storage`);
         } else {
             allPairs = new Map();
-            console.log('No stored data found');
         }
     }).catch(err => {
         console.error('Error loading from storage:', err);
@@ -105,10 +101,7 @@ function loadFromStorage() {
 function saveToStorage() {
     if (allPairs.size > 0) {
         const pairsObj = Object.fromEntries(allPairs);
-        console.log('Saving to storage:', allPairs.size, 'pairs');
-        browserAPI.storage.local.set({ tickerPairs: pairsObj }).then(() => {
-            console.log(`Saved ${allPairs.size} pairs to storage`);
-        }).catch(err => {
+        browserAPI.storage.local.set({ tickerPairs: pairsObj }).catch(err => {
             console.error('Error saving to storage:', err);
         });
     }
@@ -116,8 +109,3 @@ function saveToStorage() {
 
 // Load saved data when extension starts
 loadFromStorage();
-
-// Save data periodically (but don't auto-download)
-setInterval(() => {
-    saveToStorage();
-}, 30000); // Save every 30 seconds

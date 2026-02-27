@@ -20,20 +20,6 @@ const autoScrollBtn = document.getElementById('autoScrollBtn');
 const scrollStatus = document.getElementById('scrollStatus');
 const csvFileInput = document.getElementById('csvFileInput');
 
-console.log('Popup script loaded');
-console.log('Elements found:', {
-    pairCountEl: !!pairCountEl,
-    csvTextArea: !!csvTextArea,
-    loadCsvBtn: !!loadCsvBtn,
-    loadExistingBtn: !!loadExistingBtn,
-    toggleCsvBtn: !!toggleCsvBtn,
-    csvSection: !!csvSection,
-    timeFilter: !!timeFilter,
-    showTopBtn: !!showTopBtn,
-    exportBtn: !!exportBtn,
-    clearBtn: !!clearBtn
-});
-
 // Update pair count display
 function updatePairCount() {
     browserAPI.storage.local.get('tickerPairs').then(result => {
@@ -235,28 +221,23 @@ toggleCsvBtn.addEventListener('click', () => {
     }
 });
 
+// Fetch the bundled CSV file and process it into storage
+async function fetchAndLoadExtensionCSV() {
+    const response = await fetch('twitter_tickers_cache.csv');
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const csvText = await response.text();
+    await processCsvData(csvText);
+}
+
 // Auto-load existing CSV file only once on extension start
 let hasAutoLoaded = false;
 async function autoLoadExistingCSV() {
     if (hasAutoLoaded) return;
-    
     try {
-        log('Auto-loading existing CSV file...');
-        
-        // Try to fetch the existing CSV file
-        const response = await fetch('twitter_tickers_cache.csv');
-        if (!response.ok) {
-            log(`Could not load CSV file: HTTP ${response.status}`);
-            return;
-        }
-        
-        const csvText = await response.text();
-        log(`Auto-loaded existing CSV file, length: ${csvText.length}`);
-        
-        // Process the CSV data directly
-        await processCsvData(csvText);
+        await fetchAndLoadExtensionCSV();
         hasAutoLoaded = true;
-        
     } catch (err) {
         log(`Auto-load failed: ${err.message}`);
         // Silently fail - user can manually load if needed
@@ -267,25 +248,10 @@ async function autoLoadExistingCSV() {
 loadExistingBtn.addEventListener('click', async () => {
     try {
         showMessage('Loading existing CSV file...', 'info');
-        
-        // Try to fetch the existing CSV file
-        const response = await fetch('twitter_tickers_cache.csv');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const csvText = await response.text();
-        log(`Loaded existing CSV file, length: ${csvText.length}`);
-        
-        // Process the CSV data directly
-        await processCsvData(csvText);
-        
+        await fetchAndLoadExtensionCSV();
     } catch (err) {
         log(`Error loading existing CSV: ${err.message}`);
         showMessage(`Error loading CSV file: ${err.message}`, 'error');
-        
-        // Fallback: show instructions
-        showMessage('Could not load CSV file. Please copy and paste the content manually.', 'info');
     }
 });
 
@@ -382,42 +348,37 @@ clearBtn.addEventListener('click', () => {
     }
 });
 
-
 // Auto-scroll button functionality
 let isAutoScrollActive = false;
 
-async function updateAutoScrollButton() {
-    try {
-        // Query the active tab
-        const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
-        if (tabs.length === 0) return;
-
-        // Get scroll status from content script
-        const response = await browserAPI.tabs.sendMessage(tabs[0].id, { type: 'GET_AUTO_SCROLL_STATUS' });
-
-        if (response && response.isScrolling) {
-            isAutoScrollActive = true;
-            autoScrollBtn.textContent = 'Stop Auto-Scroll';
-            autoScrollBtn.classList.remove('primary');
-            autoScrollBtn.classList.add('danger');
-            scrollStatus.textContent = 'Auto-scrolling...';
-            scrollStatus.style.display = 'block';
-            scrollStatus.className = 'status success';
-        } else {
-            isAutoScrollActive = false;
-            autoScrollBtn.textContent = 'Start Auto-Scroll';
-            autoScrollBtn.classList.remove('danger');
-            autoScrollBtn.classList.add('primary');
-            scrollStatus.style.display = 'none';
-        }
-    } catch (err) {
-        console.log('Could not get auto-scroll status:', err.message);
-        // Reset to default state
-        isAutoScrollActive = false;
+// Update auto-scroll button and status indicator to reflect current state
+function setAutoScrollState(isScrolling) {
+    isAutoScrollActive = isScrolling;
+    if (isScrolling) {
+        autoScrollBtn.textContent = 'Stop Auto-Scroll';
+        autoScrollBtn.classList.remove('primary');
+        autoScrollBtn.classList.add('danger');
+        scrollStatus.textContent = 'Auto-scrolling...';
+        scrollStatus.style.display = 'block';
+        scrollStatus.className = 'status success';
+    } else {
         autoScrollBtn.textContent = 'Start Auto-Scroll';
         autoScrollBtn.classList.remove('danger');
         autoScrollBtn.classList.add('primary');
         scrollStatus.style.display = 'none';
+    }
+}
+
+async function updateAutoScrollButton() {
+    try {
+        const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
+        if (tabs.length === 0) return;
+
+        const response = await browserAPI.tabs.sendMessage(tabs[0].id, { type: 'GET_AUTO_SCROLL_STATUS' });
+        setAutoScrollState(response && response.isScrolling);
+    } catch (err) {
+        console.log('Could not get auto-scroll status:', err.message);
+        setAutoScrollState(false);
     }
 }
 
@@ -439,23 +400,11 @@ autoScrollBtn.addEventListener('click', async () => {
         }
 
         if (isAutoScrollActive) {
-            // Stop scrolling
             await browserAPI.tabs.sendMessage(tab.id, { type: 'STOP_AUTO_SCROLL' });
-            isAutoScrollActive = false;
-            autoScrollBtn.textContent = 'Start Auto-Scroll';
-            autoScrollBtn.classList.remove('danger');
-            autoScrollBtn.classList.add('primary');
-            scrollStatus.style.display = 'none';
+            setAutoScrollState(false);
         } else {
-            // Start scrolling
             await browserAPI.tabs.sendMessage(tab.id, { type: 'START_AUTO_SCROLL' });
-            isAutoScrollActive = true;
-            autoScrollBtn.textContent = 'Stop Auto-Scroll';
-            autoScrollBtn.classList.remove('primary');
-            autoScrollBtn.classList.add('danger');
-            scrollStatus.textContent = 'Auto-scrolling...';
-            scrollStatus.style.display = 'block';
-            scrollStatus.className = 'status success';
+            setAutoScrollState(true);
         }
     } catch (err) {
         console.log('Error toggling auto-scroll:', err);
@@ -466,21 +415,7 @@ autoScrollBtn.addEventListener('click', async () => {
 // Listen for auto-scroll status updates from content script
 browserAPI.runtime.onMessage.addListener((message) => {
     if (message.type === 'AUTO_SCROLL_STATUS') {
-        if (message.isScrolling) {
-            isAutoScrollActive = true;
-            autoScrollBtn.textContent = 'Stop Auto-Scroll';
-            autoScrollBtn.classList.remove('primary');
-            autoScrollBtn.classList.add('danger');
-            scrollStatus.textContent = 'Auto-scrolling...';
-            scrollStatus.style.display = 'block';
-            scrollStatus.className = 'status success';
-        } else {
-            isAutoScrollActive = false;
-            autoScrollBtn.textContent = 'Start Auto-Scroll';
-            autoScrollBtn.classList.remove('danger');
-            autoScrollBtn.classList.add('primary');
-            scrollStatus.style.display = 'none';
-        }
+        setAutoScrollState(message.isScrolling);
     }
 });
 

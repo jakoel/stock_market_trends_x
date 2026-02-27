@@ -27,6 +27,15 @@ function isRepostOrReply(article) {
     return false;
 }
 
+// Normalize a status link href to a clean absolute URL
+function normalizeStatusUrl(href) {
+    let url = href.startsWith('http') ? href : 'https://x.com' + href;
+    url = url.split('?')[0];
+    url = url.replace(/\/(photo|video|analytics|likes|retweets)\/\d+$/, '');
+    url = url.replace(/\/(photo|video|analytics)$/, '');
+    return url;
+}
+
 // Function to extract ticker-post pairs from the current DOM
 function extractTickerPairs() {
     const pairs = [];
@@ -54,15 +63,7 @@ function extractTickerPairs() {
                     const statusLink = article.querySelector('a[href*="/status/"]');
                     if (statusLink) {
                         const statusHref = statusLink.getAttribute('href');
-                        // Convert relative URL to absolute
-                        let fullUrl = statusHref.startsWith('http')
-                            ? statusHref
-                            : 'https://x.com' + statusHref;
-
-                        // Clean up URL: remove query params and trailing paths like /photo/1, /video/1, /analytics
-                        fullUrl = fullUrl.split('?')[0]; // Remove query params
-                        fullUrl = fullUrl.replace(/\/(photo|video|analytics|likes|retweets)\/\d+$/, ''); // Remove /photo/1 etc.
-                        fullUrl = fullUrl.replace(/\/(photo|video|analytics)$/, ''); // Remove trailing /photo etc.
+                        const fullUrl = normalizeStatusUrl(statusHref);
 
                         // Extract timestamp from <time> element
                         const timeElement = article.querySelector('time[datetime]');
@@ -138,73 +139,12 @@ if (document.readyState === 'loading') {
 // Auto-scroll functionality
 let isAutoScrolling = false;
 let autoScrollInterval = null;
-let knownPostUrls = new Set(); // Track URLs we've already seen
 
-// Initialize known posts from storage
-async function initializeKnownPosts() {
-    knownPostUrls.clear();
-
-    try {
-        // Load from storage (includes CSV data)
-        const result = await browserAPI.storage.local.get('tickerPairs');
-
-        if (result.tickerPairs) {
-            // Extract all URLs from stored pairs
-            Object.keys(result.tickerPairs).forEach(pairKey => {
-                const url = pairKey.split('|')[1];
-                if (url) {
-                    knownPostUrls.add(url);
-                }
-            });
-        }
-
-        // Also add from current session
-        seenPairs.forEach(pairKey => {
-            const url = pairKey.split('|')[1];
-            if (url) {
-                knownPostUrls.add(url);
-            }
-        });
-
-        console.log('Initialized known posts from storage:', knownPostUrls.size);
-    } catch (err) {
-        console.error('Error loading known posts:', err);
-    }
-}
-
-// Check if we've encountered a known post in the current viewport
-function hasKnownPostInView() {
-    const articles = document.querySelectorAll('article');
-
-    for (const article of articles) {
-        const statusLink = article.querySelector('a[href*="/status/"]');
-        if (statusLink) {
-            const statusHref = statusLink.getAttribute('href');
-            let fullUrl = statusHref.startsWith('http')
-                ? statusHref
-                : 'https://x.com' + statusHref;
-
-            // Clean up URL (same logic as extraction)
-            fullUrl = fullUrl.split('?')[0];
-            fullUrl = fullUrl.replace(/\/(photo|video|analytics|likes|retweets)\/\d+$/, '');
-            fullUrl = fullUrl.replace(/\/(photo|video|analytics)$/, '');
-
-            if (knownPostUrls.has(fullUrl)) {
-                console.log('Found known post in view:', fullUrl);
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-// Human-like scroll function
 // Human-like scroll function
 function humanLikeScroll() {
     if (!isAutoScrolling) return;
 
-    // 1. THIS CONTROLS SCROLL DISTANCE (currently 50-150 pixels)
+    // 1. THIS CONTROLS SCROLL DISTANCE (currently 300-400 pixels)
     const scrollDistance = Math.floor(Math.random() * 100) + 300;
 
     // Smooth scroll
@@ -220,14 +160,11 @@ function humanLikeScroll() {
 }
 
 // Start auto-scrolling
-async function startAutoScroll() {
+function startAutoScroll() {
     if (isAutoScrolling) return;
 
     console.log('Starting auto-scroll...');
     isAutoScrolling = true;
-
-    // Wait for known posts to be loaded from storage
-    await initializeKnownPosts();
 
     // Send message to popup
     browserAPI.runtime.sendMessage({
